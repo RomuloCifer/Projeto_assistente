@@ -1,55 +1,24 @@
 #Let's get started#
-
-import speech_recognition as sr
-from gtts import gTTS
 import os
-import playsound
+from funcoes_falar_ouvir import falar, ouvir_comando, escutar_palavra_ativacao
 
-# função para converter texto em fala
-def falar(texto):
-    try:
-        tts = gTTS(text=texto, lang='pt-br')
-        arquivo_audio = 'fala.mp3'
-        tts.save(arquivo_audio)
-        playsound.playsound(arquivo_audio)
-        os.remove(arquivo_audio)
-    except Exception as e:
-        print(f"Erro ao tentar falar: {e}")
-# função para ouvir e reconhecer fala
-def ouvir_comando():
-    reconhecedor = sr.Recognizer()
-    # Usando o microfone padrão do sistema
-    with sr.Microphone() as source:
-        print("Ajustando ruído de ambiente...")
-        # ajuste para ruído de ambiente
-        reconhecedor.adjust_for_ambient_noise(source, duration=1)
-        print("Ouvindo...")
-        #Gravando o que o usuario fala
-        fala = reconhecedor.listen(source)
-        try:
-            print("Reconhecendo...")
-            #reconhecendo a fala em pt-br
-            comando = reconhecedor.recognize_google(fala, language='pt-BR')
-            print(f"Você disse: {comando}\n")
-            return comando.lower()
-        
-        except sr.UnknownValueError:
-            #caso não entenda o que foi dito
-            print("Desculpe, pode repetir?")
-            return None
-        except sr.RequestError as e:
-            print(f"Erro ao conectar ao serviço de reconhecimento de fala: {e}")
-            return None
+
 # função principal
 def rodar_assistente():
-    falar("Olá! Sou sua assistente virtual. Como posso ajudar?")
     while True:
+        #espera a palavra de ativação
+        escutar_palavra_ativacao()
+        falar("Sim, estou ouvindo.")
         comando = ouvir_comando()
-        #por enquanto ele só repede e para se ouvir "sair"
-        if comando:
-            falar(f"Você disse: {comando}")
-            if "sair" in comando:
-                falar("Encerrando a assistente. Até mais!")
-                break
+        #processamento do comando
+        if not comando:
+            continue            
+        if "sair" in comando:
+            falar("Encerrando a assistente. Até mais!")
+            break
+        elif "que horas são" in comando:
+            falar("Ainda não sei ver as horas, mas estou aprendendo!")
+        else:
+            falar(f"entendi o comando, mas ainda não sei executar")
 if __name__ == "__main__":
     rodar_assistente()

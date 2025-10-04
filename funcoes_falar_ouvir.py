@@ -1,17 +1,9 @@
-import speech_recognition as sr
-from gtts import gTTS
-import playsound
-import pvporcupine
-import pyaudio
+import speech_recognition as sr # type: ignore
+from gtts import gTTS # type: ignore
+import playsound, pvporcupine, pyaudio # type: ignore
 import os
 # porcupine espera áudio em 16-bit, por isso importamos o struct
 import struct
-
-#ACCESS PORCUPINE
-PORCUPINE_ACCESS_KEY = os.getenv("PORCUPINE_ACCESS_KEY")
-if not PORCUPINE_ACCESS_KEY:
-    raise ValueError("Chave de API do Porcupine não encontrada. Verifique seu arquivo .env")
-
 
 # função para converter texto em fala
 def falar(texto):
@@ -23,6 +15,7 @@ def falar(texto):
         os.remove(arquivo_audio)
     except Exception as e:
         print(f"Erro ao tentar falar: {e}")
+
 # função para ouvir e reconhecer fala
 def ouvir_comando():
     reconhecedor = sr.Recognizer()
@@ -48,7 +41,18 @@ def ouvir_comando():
         except sr.RequestError as e:
             print(f"Erro ao conectar ao serviço de reconhecimento de fala: {e}")
             return None
+        
+# função para escutar a palavra de ativação
 def escutar_palavra_ativacao():
+    from dotenv import load_dotenv # type: ignore
+    #carregar a keys do .env
+    load_dotenv()
+    #ACCESS PORCUPINE
+    ACCESS_KEY = os.getenv("PORCUPINE_ACCESS_KEY")
+    if not ACCESS_KEY:
+        raise ValueError("Chave de API do Porcupine não encontrada. Verifique seu arquivo .env")
+    ######################################
+
     palavra_chave = "alexa"
     print(f"Esperando pela palavra de ativação {palavra_chave}")
     porcupine = None

@@ -1,10 +1,7 @@
 #Let's get started#
 import os
 from funcoes_falar_ouvir import falar, ouvir_comando, escutar_palavra_ativacao
-from habilidades import obter_previsao_tempo
-
-
-
+from habilidades import obter_previsao_tempo, analisar_comando_gemini
 
 # função principal
 def rodar_assistente():
@@ -12,35 +9,32 @@ def rodar_assistente():
         #espera a palavra de ativação
         escutar_palavra_ativacao()
         falar("Sim, estou ouvindo.")
+        #Ouve o comando do usuario
         comando = ouvir_comando()
+
         #processamento do comando
         if not comando:
-            continue            
-        if "sair" in comando:
-            falar("Encerrando a assistente. Até mais!")
-            break
-        elif "que horas são" in comando:
-            falar("Ainda não sei ver as horas, mas estou aprendendo!")
-        elif any(kw in comando for kw in ["previsao", "tempo", "clima"]):
-            #lista de palavras para pegar a cidade            
-            palavras_gatilho = ['em', 'de', 'para', 'na', 'no']
-            palavras = comando.split()
-            try:
-                #tenta pegar o indice da palavra gatilho
-                indice_gatilho = next(i for i, palavra in enumerate(palavras) if palavra in palavras_gatilho)
-                #pega tudo que vem depois do gatilho como nome da cidade
-                cidade = ' '.join(palavras[indice_gatilho + 1:])
-                #se não entender a cidade, pede para repetir
-                if not cidade:
-                    falar("Desculpe, não entendi a cidade")
-                    continue        
-                resposta_clima = obter_previsao_tempo(cidade)
-                falar(resposta_clima)   
-            #se não encontrar nenhuma palavra gatilho
-            except StopIteration:
-                falar("Não ouvi gatilhos")
+            continue          
 
-        else:
-            falar(f"entendi o comando, mas ainda não sei executar")
+        #Aqui analisamos o comando e pegamos a intenção, cidade e data
+        dados = analisar_comando_gemini(comando)
+        intent = dados.get("intent")
+        #dependendo da intenção que a IA retornar, fazemos algo.
+        if intent == 'get_weather':
+            cidade = dados.get("location")
+            data = dados.get("date")
+            if not cidade:
+                falar("Por favor, especifique a cidade para a previsão do tempo.")
+                continue
+            #por enquanto a IA só verifica o tempo para hoje.
+            resposta_clima = obter_previsao_tempo(cidade)
+            falar(resposta_clima)
+        elif intent == 'get_time':
+            falar("Ainda não sei fazer isso, mas logo aprenderei.")
+        elif intent == 'unknown':
+            falar("Desculpe, não entendi o comando.")
+        elif intent == 'exit':
+            falar('Encerrando o assistente. Até mais!')
+            break
 if __name__ == "__main__":
     rodar_assistente()

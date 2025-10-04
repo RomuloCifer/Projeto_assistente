@@ -32,13 +32,13 @@ def analisar_comando_gemini(comando):
 
     Extraia as informações e retorne APENAS um objeto JSON com:
     1. "intent": A intenção. Deve ser 'get_weather', 'get_time', 'exit', ou 'unknown'.
-    2. "location": A cidade ou local.
+    2. "location": A cidade ou local. Pode ser nulo se não especificado.
     3. "date": A data exata no formato AAAA-MM-DD. Use o contexto de hoje para calcular datas relativas como 'amanhã', 'próximo sábado', 'depois de amanhã'.
 
-    Exemplos:
-    - Comando: "previsão para o próximo sábado em salvador", Hoje é Sábado, 2025-10-04 -> JSON: {{"intent": "get_weather", "location": "Salvador", "date": "2025-10-11"}}
-    - Comando: "como vai estar o tempo depois de amanhã em Curitiba", Hoje é 2025-10-04 -> JSON: {{"intent": "get_weather", "location": "Curitiba", "date": "2025-10-06"}}
-    - Comando: "clima para hoje" -> JSON: {{"intent": "get_weather", "location": null, "date": "{data_hoje.strftime('%Y-%m-%d')}"}}
+    Exemplos de raciocínio (não use essas datas, são apenas para ilustrar o formato):
+    - Se hoje for 2025-10-04 (Sábado) e o comando for "previsão para o próximo sábado em salvador", a data deve ser "2025-10-11".
+    - Se hoje for 2025-10-04 e o comando for "como vai estar o tempo depois de amanhã em Curitiba", a data deve ser "2025-10-06".
+    - Se o comando for "clima para hoje", a data deve ser a data de hoje fornecida acima.
 
     Analise o comando fornecido.
     """

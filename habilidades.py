@@ -91,7 +91,7 @@ def obter_previsao_futuro(lat, lon, data_alvo_str):
                 temp_max = previsao_diaria['temp']['max']
                 descricao = previsao_diaria['weather'][0]['description']
                 #depois de encontrar o dia certo, pega a temperatura máxima e a descrição do tempo
-                return f"A previsão para {data_alvo_str} é de máxima de {temp_max:.0f} graus com {descricao}."
+                return f"A previsão para{data_alvo_str} é de máxima de {temp_max:.0f} graus com {descricao}."
         #se o loop terminar sem achar a data.
         return "Desculpe, não tenho dados para esta data."
     except Exception as e:

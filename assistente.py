@@ -1,7 +1,7 @@
 #Let's get started#
 import os
 from funcoes_falar_ouvir import falar, ouvir_comando, escutar_palavra_ativacao
-from habilidades import obter_previsao_tempo, analisar_comando_gemini
+from habilidades import obter_previsao_tempo, analisar_comando_gemini, obter_coordenadas, obter_previsao_futuro
 
 # função principal
 def rodar_assistente():
@@ -26,9 +26,18 @@ def rodar_assistente():
             if not cidade:
                 falar("Por favor, especifique a cidade para a previsão do tempo.")
                 continue
-            #por enquanto a IA só verifica o tempo para hoje.
-            resposta_clima = obter_previsao_tempo(cidade)
-            falar(resposta_clima)
+            #se a data for hoje ou não especificada, pegamos a previsão atual
+            if not data or data == "hoje":
+                resposta_clima = obter_previsao_tempo(cidade)
+                falar(resposta_clima)
+            else:
+                #se a data for futura.
+                lat, lon = obter_coordenadas(cidade)
+                if lat and lon:
+                    resposta = obter_previsao_futuro(lat, lon, data)
+                    falar(resposta)
+                else:
+                    falar(f"Desculpe, não achei a cidade {cidade}.")
         elif intent == 'get_time':
             falar("Ainda não sei fazer isso, mas logo aprenderei.")
         elif intent == 'unknown':

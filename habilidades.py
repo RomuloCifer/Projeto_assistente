@@ -9,7 +9,7 @@ load_dotenv()
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 if not WEATHER_API_KEY:
     raise ValueError("Chave de API do OpenWeatherMap não encontrada. Verifique seu arquivo .env")
-def obter_previsao_tempo(cidade="Nova Friburgo"):
+def obter_previsao_tempo(cidade: str):
     """Obtém a previsão do tempo para uma cidade específica usando o OpenWeatherMap"""
     url_base = f"http://api.openweathermap.org/data/2.5/weather?q={cidade}&appid={WEATHER_API_KEY}&units=metric&lang=pt_br"
 
@@ -27,7 +27,7 @@ def obter_previsao_tempo(cidade="Nova Friburgo"):
         descricao = dados_clima['weather'][0]['description']
 
         #frase para o assistente
-        frase_clima = f"No momento, em {cidade}, está fazendo {temperatura} graus Celsius com {descricao}."
+        frase_clima = f"No momento, em {cidade}, está fazendo {temperatura} graus Celsius e está {descricao}."
         return frase_clima
     except requests.exceptions.HTTPError as http_err:
         if resposta.status_code == 404:

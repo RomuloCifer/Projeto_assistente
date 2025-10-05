@@ -3,7 +3,7 @@ import os
 import time
 from datetime import datetime
 from funcoes_falar_ouvir import falar, ouvir_comando, escutar_palavra_ativacao, falar_audio_pre_gravado
-from habilidades import obter_previsao_tempo, analisar_comando_gemini, obter_coordenadas, obter_previsao_futuro
+from habilidades import obter_previsao_tempo, analisar_comando_gemini, obter_coordenadas, obter_previsao_futuro, pesquisar_musica_youtube
 #Multiprocessing para fazer a assistente parecer mais responsiva, sem travar a fala e o ouvir.
 from multiprocessing import Process
 # controlador para o navegador
@@ -11,6 +11,10 @@ from controlador_navegador import ControladorNavegador
 
 # função principal
 def rodar_assistente():
+    controlador = ControladorNavegador() # inicia o controlador do Navegador fora do if, para evitar reiniciar o navegador toda vez.
+    sucesso_ao_iniciar = controlador.iniciar_navegador(navegador='chrome', headless=True) # Inicia o navegador uma vez no começo.
+    if not sucesso_ao_iniciar:
+        print("Não foi possível iniciar o navegador. A funcionalidade de tocar música estará indisponível.")
     while True:
         #espera a palavra de ativação
         escutar_palavra_ativacao()
@@ -58,23 +62,21 @@ def rodar_assistente():
         elif intent == 'tocar_musica':
             titulo_musica = dados.get("music_title")
             if titulo_musica:
-                processo_feedback.join() #espera o processo de feedback terminar
-                falar(f"Tocando {titulo_musica}")
-                controlador = ControladorNavegador()
-                sucesso = controlador.iniciar_navegador(navegador='chrome', headless=False)
-                #se conseguir iniciar o navegador, toca a música.
-                if sucesso:
-                    controlador.tocar_musica(titulo_musica)
+                video_id = pesquisar_musica_youtube(titulo_musica)
+                if video_id:
+                    #monta a URL completa do vídeo
+                    url_video = f"https://www.youtube.com/watch?v={video_id}"
+                    #manda o navegador abrir o vídeo pela URL
+                    controlador.tocar_musica(url_video)
+                    resposta_final = f"Tocando {titulo_musica} no YouTube."
                 else:
-                    processo_feedback.join() #espera o processo de feedback terminar
-                    falar("Não consegui iniciar o navegador para tocar a música.")
-            #Caso não tenha entendido o título da música.
+                    resposta_final = "Não consegui encontrar a música no YouTube."
             else:
-                processo_feedback.join() #espera o processo de feedback terminar
-                falar("Não consegui identificar o título da música.")
+                resposta_final = "Não consegui identificar o título da música."
         elif intent == 'unknown':
             falar("Desculpe, não entendi o comando.")
         elif intent == 'exit':
+            controlador.fechar_navegador() # Fecha o navegador ao sair
             falar('Encerrando o assistente. Até mais!')
             break
 

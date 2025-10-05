@@ -100,3 +100,13 @@ def escutar_palavra_ativacao():
             pa.terminate()
         if porcupine is not None:
             porcupine.delete()
+
+
+def falar_audio_pre_gravado(nome_arquivo):
+    """Função para tocar um áudio pré-gravado."""
+    try:
+        caminho_audio = os.path.join("audios", f"{nome_arquivo}.mp3")
+        playsound.playsound(caminho_audio)
+    except Exception as e:
+        #Se o arquivo não existir ou der erro ao tocar.
+        print(f"Erro ao tentar tocar o áudio '{nome_arquivo}': {e}")

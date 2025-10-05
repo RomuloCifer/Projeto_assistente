@@ -22,12 +22,14 @@ def rodar_assistente():
         #Se não entendeu, volta para o começo.
         if not comando:
             continue
+        #Se entender algum comando, antes de analisar, fala que está processando. Evita o silêncio constrangedor.
         processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",))
         processo_feedback.start()
         #Aqui analisamos o comando e pegamos a intenção, cidade e data
         dados = analisar_comando_gemini(comando)
         intent = dados.get("intent")
         data_hoje = datetime.now().strftime('%Y-%m-%d')
+        resposta_final = "" #variavel para guardar a resposta final.
 
         #dependendo da intenção que a IA retornar, fazemos algo.
         if intent == 'get_weather':
@@ -36,25 +38,16 @@ def rodar_assistente():
             #Se não tiver cidade, volta para o começo.
             if not cidade:
                 continue
+            
             #se a data for hoje ou não especificada, pegamos a previsão atual
             if not data or data == data_hoje:
-                processo_feedback = Process(target=falar_audio_pre_gravado, args=("clima hoje",))
-                processo_feedback.start()
-                processo_feedback.join() #espera falar.
-                #enquanto a assistente fala, já pega a previsão.
-                resposta_clima = obter_previsao_tempo(cidade)
-                processo_feedback.join() #espera falar.
-                falar(resposta_clima)
+                resposta_final = obter_previsao_tempo(cidade)
             else:
-                processo_feedback.join() #espera falar.
                 #se a data for futura.
                 lat, lon = obter_coordenadas(cidade)
                 if lat and lon:
-                    resposta = obter_previsao_futuro(lat, lon, data)
-                    processo_feedback.join() #espera falar.
-                    falar(f"Em {cidade}, {resposta}")
+                    resposta_final = obter_previsao_futuro(lat, lon, data)
                 else:
-                    processo_feedback.join() #espera falar.
                     falar(f"Desculpe, não achei a cidade {cidade}.")
         elif intent == 'get_time':
             falar("Ainda não sei fazer isso, mas logo aprenderei.")
@@ -63,5 +56,8 @@ def rodar_assistente():
         elif intent == 'exit':
             falar('Encerrando o assistente. Até mais!')
             break
+        processo_feedback.join() #espera o processo de feedback terminar
+        falar(resposta_final)
+
 if __name__ == "__main__":
     rodar_assistente()

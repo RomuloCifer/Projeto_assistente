@@ -58,7 +58,7 @@ def rodar_assistente():
         elif intent == 'tocar_musica':
             titulo_musica = dados.get("music_title")
             if titulo_musica:
-                processo.feedback.join() #espera o processo de feedback terminar
+                processo_feedback.join() #espera o processo de feedback terminar
                 falar(f"Tocando {titulo_musica}")
                 controlador = ControladorNavegador()
                 sucesso = controlador.iniciar_navegador(navegador='chrome', headless=False)
@@ -66,11 +66,11 @@ def rodar_assistente():
                 if sucesso:
                     controlador.tocar_musica(titulo_musica)
                 else:
-                    processo.feedback.join() #espera o processo de feedback terminar
+                    processo_feedback.join() #espera o processo de feedback terminar
                     falar("Não consegui iniciar o navegador para tocar a música.")
             #Caso não tenha entendido o título da música.
             else:
-                processo.feedback.join() #espera o processo de feedback terminar
+                processo_feedback.join() #espera o processo de feedback terminar
                 falar("Não consegui identificar o título da música.")
         elif intent == 'unknown':
             falar("Desculpe, não entendi o comando.")

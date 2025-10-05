@@ -19,6 +19,8 @@ def falar(texto):
 # função para ouvir e reconhecer fala
 def ouvir_comando():
     reconhecedor = sr.Recognizer()
+    # Só para de ouvir quando a pausa for de 1.5 segundos
+    reconhecedor.pause_threshold = 2
     # Usando o microfone padrão do sistema
     with sr.Microphone() as source:
         print("Ajustando ruído de ambiente...")
@@ -26,7 +28,7 @@ def ouvir_comando():
         reconhecedor.adjust_for_ambient_noise(source, duration=1)
         print("Ouvindo...")
         #Gravando o que o usuario fala
-        fala = reconhecedor.listen(source, phrase_time_limit=10)
+        fala = reconhecedor.listen(source, phrase_time_limit=7)
         try:
             print("Reconhecendo...")
             #reconhecendo a fala em pt-br

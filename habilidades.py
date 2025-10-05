@@ -4,6 +4,7 @@ import os
 import google.generativeai as genai # type: ignore
 #precisamos do datetime para pegar a hora e lidar com comandos do tipo "qual a previsão para amanhã?"
 import datetime 
+from googleapiclient.discovery import build # type: ignore
 from dotenv import load_dotenv # type: ignore
 #carregar a keys do .env
 load_dotenv()
@@ -31,13 +32,15 @@ def analisar_comando_gemini(comando):
     O comando é: "{comando}"
 
     Extraia as informações e retorne APENAS um objeto JSON com:
-    1. "intent": A intenção. Deve ser 'get_weather', 'get_time', 'exit', ou 'unknown'.
+    1. "intent": A intenção. Deve ser 'get_weather', 'get_time', 'exit', 'tocar_musica', ou 'unknown'.
     2. "location": A cidade ou local. Pode ser nulo se não especificado.
-    3. "date": A data exata no formato AAAA-MM-DD. Use o contexto de hoje para calcular datas relativas como 'amanhã', 'próximo sábado', 'depois de amanhã'.
+    3. "date": A data exata no formato AAAA-MM-DD. Use o contexto de hoje.
+    4. "music_title": O nome da música e/ou artista. Nulo se não for a intenção.
 
     Exemplos de raciocínio (não use essas datas, são apenas para ilustrar o formato):
-    - Se hoje for 2025-10-04 (Sábado) e o comando for "previsão para o próximo sábado em salvador", a data deve ser "2025-10-11".
-    - Se hoje for 2025-10-04 e o comando for "como vai estar o tempo depois de amanhã em Curitiba", a data deve ser "2025-10-06".
+    - Se o comando for "previsão para o próximo sábado em salvador", a data deve ser "2025-10-11".
+    - Se o comando for "como vai estar o tempo depois de amanhã em Curitiba", a data deve ser "2025-10-06".
+    - Se o comando for "toque bohemian rhapsody queen", a intenção deve ser "tocar_musica" e "music_title" deve ser "bohemian rhapsody queen".
     - Se o comando for "clima para hoje", a data deve ser a data de hoje fornecida acima.
 
     Analise o comando fornecido.

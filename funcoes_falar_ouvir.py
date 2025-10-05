@@ -26,7 +26,7 @@ def ouvir_comando():
         reconhecedor.adjust_for_ambient_noise(source, duration=1)
         print("Ouvindo...")
         #Gravando o que o usuario fala
-        fala = reconhecedor.listen(source, phrase_time_limit=7)
+        fala = reconhecedor.listen(source, phrase_time_limit=10)
         try:
             print("Reconhecendo...")
             #reconhecendo a fala em pt-br

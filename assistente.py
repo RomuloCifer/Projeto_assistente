@@ -5,6 +5,7 @@ import os
 import time
 from datetime import datetime
 from multiprocessing import Process # Para executar tarefas em paralelo (ex: falar enquanto ouve).
+from tradutor_clipboard import monitorar_clipboard
 
 # ==========================================================
 # 3. Módulos Locais (Nossos próprios arquivos .py)
@@ -14,7 +15,7 @@ from controlador_navegador import ControladorNavegador
 # Importa funções básicas de fala e escuta.
 from funcoes_falar_ouvir import falar, ouvir_comando, falar_audio_pre_gravado
 # Importa as habilidades principais do assistente (clima, análise de comando, busca de música).
-from habilidades import (obter_previsao_tempo, analisar_comando_gemini,
+from Habilidades import (obter_previsao_tempo, analisar_comando_gemini,
                          obter_coordenadas, obter_previsao_futuro,
                          pesquisar_musica_youtube)
 # Importa a classe para controlar o volume do sistema.
@@ -30,81 +31,117 @@ PORCUPINE_ACCESS_KEY = os.getenv("PORCUPINE_ACCESS_KEY")
 
 
 
-# função principal
-def rodar_assistente():
-    controlador_web = ControladorNavegador() # inicia o controlador do Navegador fora do if, para evitar reiniciar o navegador toda vez.
-    controlador_som = ControladorVolume() # Controlador de volume
-    detector_wake_word = DetectorPalavraDeAtivacao(PORCUPINE_ACCESS_KEY, palavra_chave="alexa") # Inicializa o detector de palavra de ativação
+# classe principal
+class Assistente:
+    def __init__(self, palavra_ativacao="alexa", navegador='chrome', headless=False, sensibilidade=0.5):
+        self.controlador_web = ControladorNavegador() # inicia o controlador do Navegador
+        self.controlador_som = ControladorVolume() # Controlador de volume
+        self.detector_wake_word = DetectorPalavraDeAtivacao(PORCUPINE_ACCESS_KEY, palavra_chave=palavra_ativacao, sensitivity=sensibilidade) # Inicializa o detector de palavra de ativação
+        self.navegador_iniciado = self.controlador_web.iniciar_navegador(navegador=navegador, headless=headless) # Inicia o navegador uma vez no começo.
+        self.processo_tradutor = None # Processo do tradutor clipboard
+        if not self.navegador_iniciado:
+            print("Não foi possível iniciar o navegador. A funcionalidade de tocar música estará indisponível.")
+        
+    def _processar_comando(self, comando):
+        """Processa o comando e executa a ação apropriada."""
+        if not comando: # Se não entendeu, volta para o começo.
+            return
+        processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",)) # assistente responde em um processo separado
+        processo_feedback.start()
 
-    sucesso_navegador = controlador_web.iniciar_navegador(navegador='chrome', headless=True) # Inicia o navegador uma vez no começo.
-    if not sucesso_navegador:
-        print("Não foi possível iniciar o navegador. A funcionalidade de tocar música estará indisponível.")
-    while True:
-        detector_wake_word.iniciar_escuta() #espera a palavra de ativação
-        try:
-            controlador_som.definir_volume(0.2) # Abaixa o volume do sistema para ouvir melhor o comando
-            processo_fala = Process(target=falar_audio_pre_gravado, args=("ouvindo",)) # assistente responde em um processo separado
-            processo_fala.start()
-            time.sleep(1.1) #pausa para evitar que o assistente se ouça
-            comando = ouvir_comando() #Ouve o comando do usuario
-            #Se não entendeu, volta para o começo.
-            if not comando:
-                continue
-            
-            #Se entender algum comando, antes de analisar, fala que está processando. Evita o silêncio constrangedor.
-            processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",))
-            processo_feedback.start()
-            #Aqui analisamos o comando e pegamos a intenção, cidade e data
-            dados = analisar_comando_gemini(comando)
-            intent = dados.get("intent")
-            data_hoje = datetime.now().strftime('%Y-%m-%d')
+        dados = analisar_comando_gemini(comando) #Aqui analisamos o comando e pegamos a intenção, cidade e data
+        intent = dados.get("intent")
+        data_hoje = datetime.now().strftime('%Y-%m-%d')
+        resposta_final = "" 
 
-
-            #dependendo da intenção que a IA retornar, fazemos algo.
-            if intent == 'get_weather':
-                cidade = dados.get("location")
-                data = dados.get("date") # Formato: '2025-10-04'
-                #Se não tiver cidade, volta para o começo.
-                if not cidade:
-                    continue       
-                resposta_final = ""     
-                #se a data for hoje ou não especificada, pegamos a previsão atual
-                if not data or data == data_hoje:
-                    resposta_final = obter_previsao_tempo(cidade)
+        #Lógica de decisão baseada na intenção
+        ### CLIMA
+        if intent == 'get_weather':
+            cidade = dados.get("location")
+            data = dados.get("date") # Formato: '2025-10-04'
+            if not cidade: #Se não tiver cidade, volta para o começo.
+                return       
+            if not data or data == data_hoje: #se a data for hoje ou não especificada, pegamos a previsão atual
+                resposta_final = obter_previsao_tempo(cidade)
+            else:
+                #se a data for futura.
+                lat, lon = obter_coordenadas(cidade)
+                if lat and lon:
+                    resposta_final = obter_previsao_futuro(lat, lon, data)
                 else:
-                    #se a data for futura.
-                    lat, lon = obter_coordenadas(cidade)
-                    if lat and lon:
-                        resposta_final = obter_previsao_futuro(lat, lon, data)
-                    else:
-                        resposta_final = f"Desculpe, não consegui obter a previsão do tempo."
-                processo_feedback.join() #espera o processo de feedback terminar
+                    resposta_final = f"Desculpe, não consegui obter a previsão do tempo."
+            processo_feedback.join() #espera o processo de feedback terminar
+            falar(resposta_final)
+
+        ### TOCAR MÚSICA
+        elif intent == 'tocar_musica':
+            titulo_musica = dados.get("music_title")
+            if titulo_musica and self.navegador_iniciado: # Se o navegador iniciou com sucesso
+                video_id = pesquisar_musica_youtube(titulo_musica)
+                if video_id:
+                    #monta a URL completa do vídeo
+                    url_video = f"https://www.youtube.com/watch?v={video_id}"
+                    #manda o navegador abrir o vídeo pela URL
+                    self.controlador_web.tocar_musica(url_video)
+                    resposta_final = f"Tocando {titulo_musica} no YouTube."
+                else:
+                    resposta_final = "Não consegui encontrar a música no YouTube."
                 falar(resposta_final)
-            #caso a intenção seja tocar musica.
-            elif intent == 'tocar_musica':
-                titulo_musica = dados.get("music_title")
-                if titulo_musica:
-                    video_id = pesquisar_musica_youtube(titulo_musica)
-                    if video_id:
-                        #monta a URL completa do vídeo
-                        url_video = f"https://www.youtube.com/watch?v={video_id}"
-                        #manda o navegador abrir o vídeo pela URL
-                        controlador_web.tocar_musica(url_video)
-                        resposta_final = f"Tocando {titulo_musica} no YouTube."
-                    else:
-                        resposta_final = "Não consegui encontrar a música no YouTube."
-                else:
-                    resposta_final = "Não consegui identificar o título da música."
-            elif intent == 'unknown':
-                falar("Desculpe, não entendi o comando.")
-            elif intent == 'exit':
-                controlador_web.fechar_navegador() # Fecha o navegador ao sair
-                detector_wake_word.fechar() # Para o detector de palavra de ativação
-                falar('Encerrando o assistente. Até mais!')
-                break
-        finally:
-            controlador_som.restaurar_volume() # Restaura o volume original do sistema
+        ### TRADUTOR
+        elif intent == 'iniciar_tradutor':
+            resposta_final = self.iniciar_tradutor()
+            processo_feedback.join() #espera o processo de feedback terminar
+            falar(resposta_final)
+        elif intent == 'parar_tradutor':
+            resposta_final = self._parar_tradutor()
+            processo_feedback.join() #espera o processo de feedback terminar
+            falar(resposta_final)
+        elif intent == 'exit':
+            return False # Sinaliza para sair
+        return True # Continua a execução do assistente
+        
+    def iniciar_tradutor(self):
+        """Inicia o monitoramento do clipboard em um processo separado."""
+        if self.processo_tradutor and self.processo_tradutor.is_alive():
+            return "O modo de tradução já está ativo."
+
+        self.processo_tradutor = Process(target=monitorar_clipboard)
+        self.processo_tradutor.start()
+        return "Modo de tradução ativado."
+    
+    def _parar_tradutor(self):
+        """Para o monitoramento do clipboard."""
+        if self.processo_tradutor and self.processo_tradutor.is_alive():
+            self.processo_tradutor.terminate()
+            self.processo_tradutor.join()
+            return "Modo de tradução desativado."
+        return "O modo de tradução não está ativo."
+    def executar(self):
+        """Loop principal do assistente."""
+        while True:
+            self.detector_wake_word.iniciar_escuta() #espera a palavra de ativação
+            try:
+                self.controlador_som.definir_volume(0.2) # Abaixa o volume do sistema para ouvir melhor o comando
+                processo_fala = Process(target=falar_audio_pre_gravado, args=("ouvindo",)) # assistente responde em um processo separado
+                processo_fala.start()
+                time.sleep(1.0) #pausa para evitar que o assistente se ouça
+                comando = ouvir_comando() #Ouve o comando do usuario
+                continuar_execucao = self._processar_comando(comando)
+                if not continuar_execucao:
+                    self.desligar()
+                    break
+            finally:
+                self.controlador_som.restaurar_volume() # Restaura o volume original do sistema
+    def desligar(self):
+        """Desliga o assistente, fechando recursos."""
+        if self.navegador_iniciado:
+            self.controlador_web.fechar_navegador() # Fecha o navegador ao sair
+        self.detector_wake_word.fechar() # Para o detector de palavra de ativação
+        self._parar_tradutor() # Para o tradutor se estiver ativo
+        falar('Encerrando o assistente. Até mais!')
+
 
 
 if __name__ == "__main__":
-    rodar_assistente()
+    assistente = Assistente(palavra_ativacao="alexa")
+    assistente.executar()

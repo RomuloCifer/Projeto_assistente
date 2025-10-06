@@ -1,8 +1,8 @@
 #ferramentas para se comunicar com o sistema
 from ctypes import cast, POINTER
-from comtypes import CLSCTX_ALL
+from comtypes import CLSCTX_ALL # type: ignore
 #classes para controlar o volume
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume # type: ignore
 
 
 class ControladorVolume:

@@ -19,7 +19,7 @@ from Habilidades import (obter_previsao_tempo, analisar_comando_gemini,
                          obter_coordenadas, obter_previsao_futuro,
                          pesquisar_musica_youtube)
 # Importa a classe para controlar o volume do sistema.
-from controle_volume import ControladorVolume
+from controle_volume_updated import ControladorVolume
 # Importa a nova classe que detecta a palavra de ativação.
 from palavra_ativacao import DetectorPalavraDeAtivacao
 
@@ -121,7 +121,7 @@ class Assistente:
         while True:
             self.detector_wake_word.iniciar_escuta() #espera a palavra de ativação
             try:
-                self.controlador_som.definir_volume(0.2) # Abaixa o volume do sistema para ouvir melhor o comando
+                self.controlador_som.definir_volume_aplicativos(0.2, processos_ignorar=['python.exe', 'py.exe']) # Abaixa o volume dos apps com som (exceto python.exe)
                 processo_fala = Process(target=falar_audio_pre_gravado, args=("ouvindo",)) # assistente responde em um processo separado
                 processo_fala.start()
                 time.sleep(1.0) #pausa para evitar que o assistente se ouça
@@ -131,7 +131,7 @@ class Assistente:
                     self.desligar()
                     break
             finally:
-                self.controlador_som.restaurar_volume() # Restaura o volume original do sistema
+                self.controlador_som.restaurar_volume_aplicativos() # Restaura o volume original dos apps
     def desligar(self):
         """Desliga o assistente, fechando recursos."""
         if self.navegador_iniciado:

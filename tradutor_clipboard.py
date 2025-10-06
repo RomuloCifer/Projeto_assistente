@@ -2,6 +2,30 @@ import pyperclip
 import time
 
 
+def mostrar_popup(texto_traduzido):
+    """Cria e exibe uma janela pop-up sem bordas na posição do mouse."""
+    import tkinter as tk
+    import pyautogui
+    x, y = pyautogui.position() # Pega a posição atual do mouse
+    popup = tk.Tk() # Cria a janela principal
+    popup.overrideredirect(True) # Remove bordas e barra de título
+    popup.wm_attributes("-topmost", True) # Mantém a janela no topo
+    popup.wm_attributes("-alpha", 0.7) # Define a transparência da janela (0.0 a 1.0)
+    popup.geometry(f"+{x + 15}+{y + 10}") # Posiciona a janela próxima ao mouse
+
+    label = tk.Label(
+        popup,
+        text=texto_traduzido,
+        font=("Arial", 10, "bold"), # negrito
+        bg="#FFFFE0", # cor de fundo amarelo claro
+        padx=10, pady=10, # padding interno
+        justify=tk.LEFT, # alinha o texto à esquerda
+        wraplength=300 # quebra de linha após 300 pixels
+    )
+    label.pack() 
+    popup.after(3000, popup.destroy) # Fecha o pop-up após 3 segundos
+    popup.mainloop() # Inicia o loop principal do Tkinter, que desenha a janela.
+
 def traduzir_texto(texto, dest='pt', src='auto'):
     from deep_translator import GoogleTranslator
     """
@@ -39,8 +63,7 @@ def monitorar_clipboard():
                 resultado_traducao = traduzir_texto(texto_copiado)
                 
                 if resultado_traducao:
-                    # A resposta da nova biblioteca é mais direta
-                    print(f"Tradução: {resultado_traducao}")
+                    mostrar_popup(resultado_traducao) # Mostra o pop-up com a tradução
                 
             time.sleep(1)
 

@@ -15,7 +15,7 @@ class ControladorNavegador:
         """Construtor, porém ainda não temos nenhum navegador ativo."""
         self.driver = None
 
-    def iniciar_navegador(self, navegador='chrome', headless=False):
+    def iniciar_navegador(self, navegador='chrome', headless=True):
         """inicia o navegador, pode ser chrome. o headless que vai garantir que fique invisivel."""
         try:
             #Apesar de ser para o Opera, o webdriver do chrome funciona para ambos.

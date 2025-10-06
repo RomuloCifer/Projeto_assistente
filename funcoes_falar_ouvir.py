@@ -27,7 +27,7 @@ def ouvir_comando():
         # ajuste para ruído de ambiente
         reconhecedor.adjust_for_ambient_noise(source, duration=1)
         print("Ouvindo...")
-        reconhecedor.energy_threshold = 600  # Ajusta o limiar de energia para filtrar ruídos baixos
+        reconhecedor.energy_threshold = 500  # Ajusta o limiar de energia para filtrar ruídos baixos
         #Gravando o que o usuario fala
         fala = reconhecedor.listen(source, phrase_time_limit=7)
         try:

@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions # type: i
 from selenium.webdriver.chrome.service import Service as ChromeService # type: ignore
 # carrega as variaveis de ambiente.
 load_dotenv()
-opera_caminho_executavel = os.getenv("OPERA_GX_PATH")
+chrome_caminho_executavel = os.getenv("CHROME_PROFILE_PATH")
 
 
 class ControladorNavegador:
@@ -29,10 +29,10 @@ class ControladorNavegador:
             options.add_argument('--disable-extensions') #Desativa extensões
             servico = ChromeService(service_log_path=os.devnull)
             if navegador.lower() == 'opera':
-                if not opera_caminho_executavel:
+                if not chrome_caminho_executavel:
                     raise ValueError("Caminho do Opera GX não encontrado.")
                 #aponta para o executável do Opera GX
-                options.binary_location = opera_caminho_executavel
+                options.binary_location = chrome_caminho_executavel
                 self.driver = webdriver.Chrome(service=servico, options=options) # Usamos o driver do Chrome type: ignore
             elif navegador.lower() == 'chrome':
                 self.driver = webdriver.Chrome(service=servico, options=options) # Usamos o driver do Chrome type: ignore

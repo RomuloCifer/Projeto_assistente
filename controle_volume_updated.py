@@ -1,4 +1,4 @@
-from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume
+
 from comtypes import IUnknown, GUID
 import psutil # Precisaremos desta nova biblioteca para pegar o nome do processo
 
@@ -16,6 +16,7 @@ class ControladorVolume:
             return None
 
     def definir_volume_aplicativos(self, nivel_reducao, processos_ignorar=None):
+        from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume
         """
         Reduz o volume de todos os aplicativos com som, exceto os da lista para ignorar.
         
@@ -46,6 +47,7 @@ class ControladorVolume:
                         continue
 
     def restaurar_volume_aplicativos(self):
+        from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume
         """Restaura o volume de todos os aplicativos que foram alterados."""
         if not self.volumes_originais:
             # print("[DIAG] Nenhum volume de aplicativo para restaurar.")

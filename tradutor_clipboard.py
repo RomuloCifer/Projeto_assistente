@@ -12,9 +12,9 @@ class TradutorClipboard:
         """Cria e exibe uma janela pop-up sem bordas na posição do mouse."""
         import tkinter as tk
         import pyautogui # type: ignore
-        TEMPO_MINIMO_EXIBICAO = 2
-        TEMPO_MAXIMO_EXIBICAO = 6
-        MS_POR_PALAVRA = 300
+        TEMPO_MINIMO_EXIBICAO = 2000
+        TEMPO_MAXIMO_EXIBICAO = 6000
+        MS_POR_PALAVRA = 400
 
         numero_de_palavras = len(texto_traduzido.split())
         tempo_calculado_ms = numero_de_palavras * MS_POR_PALAVRA
@@ -82,7 +82,10 @@ class TradutorClipboard:
             except Exception as e:
                 print(f"Ocorreu um erro no loop principal: {e}")
                 time.sleep(2)
-
+def iniciar_monitoramento():
+    """Função simples que cria uma instância da classe e a inicia."""
+    tradutor = TradutorClipboard()
+    tradutor.iniciar_tradutor()
 
 if __name__ == "__main__":
     tradutor = TradutorClipboard(idioma_destino='pt') # Define o idioma de destino como português

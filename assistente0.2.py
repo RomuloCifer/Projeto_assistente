@@ -19,7 +19,8 @@ from Habilidades import (obter_previsao_tempo, analisar_comando_gemini,
                          obter_coordenadas, obter_previsao_futuro,
                          pesquisar_musica_youtube, obter_data_hora_atual, GerenciadorAgenda)
 # Importa a classe TradutorClipboard do seu próprio módulo tradutor_clipboard.py
-from tradutor_clipboard import TradutorClipboard
+from tradutor_clipboard import TradutorClipboard, iniciar_monitoramento
+
 
 # Importa a classe para controlar o volume do sistema.
 from controle_volume_updated import ControladorVolume
@@ -215,7 +216,7 @@ class Assistente:
             return "O modo de tradução já está ativo."
         
         # Cria um novo processo para executar o método 'iniciar_tradutor' da nossa instância de TradutorClipboard.
-        self.processo_tradutor = Process(target=self.tradutor_clipboard_instance.iniciar_tradutor) # <-- CORREÇÃO AQUI
+        self.processo_tradutor = Process(target=iniciar_monitoramento) # 
         self.processo_tradutor.start() # Inicia o processo.
         return "Modo de tradução ativado."
     

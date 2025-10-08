@@ -55,6 +55,12 @@ def obter_previsao_futuro(lat, lon, data_alvo_str):
         print(f"Erro ao buscar previsão futura: {e}")
         return "Desculpe, tive um problema ao buscar a previsão futura."
     
+def obter_data_hora_atual():
+    """Retorna a data e hora atual formatada em string."""
+    resposta = datetime.datetime.now().strftime("Hoje é %A, %d de %B de %Y. São %H:%M horas.")
+    return resposta
+
+    
 def obter_previsao_tempo(cidade: str):
     """Retorna frase com previsão do tempo atual para uma cidade.
 

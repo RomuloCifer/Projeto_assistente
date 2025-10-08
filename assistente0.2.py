@@ -5,7 +5,7 @@ import os
 import time
 from datetime import datetime
 from multiprocessing import Process # Para executar tarefas em paralelo (ex: falar enquanto ouve).
-from Habilidades.data_hora import obter_data_hora_atual
+# from Habilidades.data_hora import obter_data_hora_atual
 from tradutor_clipboard import monitorar_clipboard
 
 # ==========================================================
@@ -44,11 +44,122 @@ class Assistente:
         if not self.navegador_iniciado:
             print("Não foi possível iniciar o navegador. A funcionalidade de tocar música estará indisponível.")
         
+
+        self.handlers = {
+            'get_weather': self._handle_get_weather,
+            'tocar_musica': self._handle_tocar_musica,
+            'iniciar_tradutor': self._handle_iniciar_tradutor,
+            'parar_tradutor': self._handle_parar_tradutor,
+            'get_time': self._handle_get_time,
+            'schedule_event': self._handle_schedule_event,
+            'exit': self._handle_exit
+        }
+
+    # ==========================================================
+    # Cada método trata uma intenção específica. (Sem mais elis \o/)
+    # ==========================================================
+
+    def _handle_get_weather(self, dados, processo_feedback):
+        """Trata da intenção de obter a previsão do tempo."""
+        ### CLIMA
+        cidade = dados.get("location")
+        data = dados.get("date") # Formato: '2025-10-04'
+        data_hoje = datetime.now().strftime('%Y-%m-%d')
+        
+        if not cidade: #Se não tiver cidade, volta para o começo.
+            processo_feedback.join()
+            falar("Por favor, diga a cidade para a previsão do tempo.")
+            return True      
+        
+        if not data or data == data_hoje: #se a data for hoje ou não especificada, pegamos a previsão atual
+            resposta_final = obter_previsao_tempo(cidade)
+        else:
+            #se a data for futura.
+            lat, lon = obter_coordenadas(cidade)
+            if lat and lon:
+                resposta_final = obter_previsao_futuro(lat, lon, data)
+            else:
+                resposta_final = f"Desculpe, não consegui obter a previsão do tempo."
+        
+        processo_feedback.join()
+        falar(resposta_final)
+        return True # Continua a execução do assistente
+
+    def _handle_tocar_musica(self, dados, processo_feedback):
+        """Se a intenção for tocar música."""
+        titulo_musica = dados.get("music_title")
+        
+        # Verifica se temos um título e se o navegador está pronto
+        if titulo_musica and self.navegador_iniciado:
+            video_id = pesquisar_musica_youtube(titulo_musica)
+            # Verifica se a busca no YouTube teve sucesso
+            if video_id:
+                url_video = f"https://www.youtube.com/watch?v={video_id}"
+                self.controlador_web.tocar_musica(url_video)
+                resposta_final = f"Tocando {titulo_musica} no YouTube."
+            else:
+                # A busca falhou, então informamos o usuário
+                resposta_final = "Não consegui encontrar a música no YouTube."
+        else:
+            # O comando não tinha um título ou o navegador falhou
+            resposta_final = "Não consegui identificar a música ou o navegador não foi iniciado."
+
+        processo_feedback.join()
+        falar(resposta_final)
+        return True # Continua a execução do assistente
+
+    def _handle_iniciar_tradutor(self, dados, processo_feedback):
+        """Se a intenção for iniciar o tradutor."""
+        resposta_final = self.iniciar_tradutor()
+        processo_feedback.join()
+        falar(resposta_final)
+        return True # Continua a execução do assistente
+
+    def _handle_parar_tradutor(self, dados, processo_feedback):
+        """Se a intenção for parar o tradutor."""
+        resposta_final = self._parar_tradutor()
+        processo_feedback.join()
+        falar(resposta_final)
+        return True # Continua a execução do assistente
+
+    def _handle_get_time(self, dados, processo_feedback):
+        """Se a intenção for obter a data e hora."""
+        resposta_final = obter_data_hora_atual() 
+        processo_feedback.join()
+        falar(resposta_final)
+        return True # Continua a execução do assistente
+
+    def _handle_schedule_event(self, dados, processo_feedback):
+        """Se a intenção for agendar um evento."""
+        ### AGENDA
+        nome_evento = dados.get("event_name")
+        data_evento = dados.get("event_date")
+        hora_evento = dados.get("event_time")
+
+        if nome_evento and data_evento and hora_evento: # Se todas as informações estiverem presentes
+            resposta_final = self.gerenciador_agenda.adicionar_evento(nome_evento, data_evento, hora_evento) # Tenta adicionar o evento
+        else:
+            resposta_final = "Informações do evento incompletas. Preciso do nome, data e hora." # Informa que faltam dados
+        
+        processo_feedback.join()
+        falar(resposta_final)
+        return True # Continua a execução do assistente
+
+    def _handle_exit(self, dados, processo_feedback):
+        """Se a intenção for encerrar o assistente."""
+        processo_feedback.join() # Garante que o som de "processando" termine
+        return False # Sinaliza para sair
+
+    # =======
+
+    # =======
+
     def _processar_comando(self, comando):
         """Processa o comando e executa a ação apropriada."""
         if not comando: # Se não entendeu, volta para o começo.
-            return
-        processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",))
+            return True
+        
+        processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",)) # assistente responde em um processo separado
         processo_feedback.start()
 
         dados = analisar_comando_gemini(comando) #Aqui analisamos o comando e pegamos a intenção, cidade e data
@@ -61,89 +172,23 @@ class Assistente:
             return True # Continua a execução, volta a ouvir
 
         intent = dados.get("intent")
-        data_hoje = datetime.now().strftime('%Y-%m-%d')
-        resposta_final = "" 
 
-        #Lógica de decisão baseada na intenção
-        ### CLIMA
-        if intent == 'get_weather':
-            cidade = dados.get("location")
-            data = dados.get("date") # Formato: '2025-10-04'
-            if not cidade: #Se não tiver cidade, volta para o começo.
-                processo_feedback.join()
-                falar("Por favor, diga a cidade para a previsão do tempo.")
-                return       
-            if not data or data == data_hoje: #se a data for hoje ou não especificada, pegamos a previsão atual
-                resposta_final = obter_previsao_tempo(cidade)
-            else:
-                #se a data for futura.
-                lat, lon = obter_coordenadas(cidade)
-                if lat and lon:
-                    resposta_final = obter_previsao_futuro(lat, lon, data)
-                else:
-                    resposta_final = f"Desculpe, não consegui obter a previsão do tempo."
-            processo_feedback.join()
-            falar(resposta_final)
+        # Aqui tentamos pegar o handler da intenção do dicionário.
+        handler = self.handlers.get(intent)
 
-        ### TOCAR MÚSICA
-        elif intent == 'tocar_musica':
-            titulo_musica = dados.get("music_title")
-
-            # Verifica se temos um título e se o navegador está pronto
-            if titulo_musica and self.navegador_iniciado:
-                video_id = pesquisar_musica_youtube(titulo_musica)
-
-                # Verifica se a busca no YouTube teve sucesso
-                if video_id:
-                    url_video = f"https://www.youtube.com/watch?v={video_id}"
-                    self.controlador_web.tocar_musica(url_video)
-                    resposta_final = f"Tocando {titulo_musica} no YouTube."
-                    falar(resposta_final)
-                else:
-                    # A busca falhou, então informamos o usuário
-                    resposta_final = "Não consegui encontrar a música no YouTube."
-                    falar(resposta_final)
-            else:
-                # O comando não tinha um título ou o navegador falhou
-                resposta_final = "Não consegui identificar a música ou o navegador não foi iniciado."
-                falar(resposta_final)
-        ### TRADUTOR
-        elif intent == 'iniciar_tradutor':
-            resposta_final = self.iniciar_tradutor()
-            processo_feedback.join()
-            falar(resposta_final)
-        elif intent == 'parar_tradutor':
-            resposta_final = self._parar_tradutor()
-            processo_feedback.join()
-            falar(resposta_final)
-        elif intent == 'exit':
-            return False # Sinaliza para sair
-                
-        ### DATA E HORA
-        elif intent == 'get_time':
-            resposta_final = obter_data_hora_atual()
-            falar(resposta_final)
-    
-        ### AGENDA
-        elif intent == "schedule_event":
-            nome_evento = dados.get("event_name")
-            data_evento = dados.get("event_date")
-            hora_evento = dados.get("event_time")
-
-            if nome_evento and data_evento and hora_evento:
-                resposta_final = self.gerenciador_agenda.adicionar_evento(nome_evento, data_evento, hora_evento)
-            else:
-                resposta_final = "Informações do evento incompletas. Preciso do nome, data e hora."
-            
-            processo_feedback.join()
-            falar(resposta_final)
+        if handler:
+            # Se o handler existir, chamamos o método para ele.
+            return handler(dados, processo_feedback)
         else:
-            # Caso a intenção seja 'unknown' ou não esteja listada
+            # Se a intenção não estiver no dicionario, resposta padrão.
             resposta_final = "Desculpe, não entendi o que você pediu."
             processo_feedback.join()
             falar(resposta_final)
+            return True # Continua a execução do assistente
 
-        return True # Continua a execução do assistente
+    # =======
+
+    # =======
 
     def iniciar_tradutor(self):
         """Inicia o monitoramento do clipboard em um processo separado."""
@@ -161,6 +206,7 @@ class Assistente:
             self.processo_tradutor.join()
             return "Modo de tradução desativado."
         return "O modo de tradução não está ativo."
+
     def executar(self):
         """Loop principal do assistente."""
         while True:
@@ -177,6 +223,7 @@ class Assistente:
                     break
             finally:
                 self.controlador_som.restaurar_volume_aplicativos() # Restaura o volume original dos apps
+
     def desligar(self):
         """Desliga o assistente, fechando recursos."""
         if self.navegador_iniciado:
@@ -184,8 +231,6 @@ class Assistente:
         self.detector_wake_word.fechar() # Para o detector de palavra de ativação
         self._parar_tradutor() # Para o tradutor se estiver ativo
         falar('Encerrando o assistente. Até mais!')
-
-
 
 if __name__ == "__main__":
     assistente = Assistente(palavra_ativacao="alexa")

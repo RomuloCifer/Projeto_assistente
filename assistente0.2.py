@@ -5,20 +5,22 @@ import os
 import time
 from datetime import datetime
 from multiprocessing import Process # Para executar tarefas em paralelo (ex: falar enquanto ouve).
-# from Habilidades.data_hora import obter_data_hora_atual
-from tradutor_clipboard import monitorar_clipboard
 
 # ==========================================================
-# 3. Módulos Locais (Nossos próprios arquivos .py)
+# 2. Módulos Locais (Nossos próprios arquivos .py e pastas de Habilidades)
 # ==========================================================
 # Importa a classe para controlar o navegador (Opera/Chrome) para tocar músicas.
 from controlador_navegador import ControladorNavegador
 # Importa funções básicas de fala e escuta.
 from funcoes_falar_ouvir import falar, ouvir_comando, falar_audio_pre_gravado
 # Importa as habilidades principais do assistente (clima, análise de comando, busca de música).
+# E as classes GerenciadorAgenda.
 from Habilidades import (obter_previsao_tempo, analisar_comando_gemini,
                          obter_coordenadas, obter_previsao_futuro,
                          pesquisar_musica_youtube, obter_data_hora_atual, GerenciadorAgenda)
+# Importa a classe TradutorClipboard do seu próprio módulo tradutor_clipboard.py
+from tradutor_clipboard import TradutorClipboard
+
 # Importa a classe para controlar o volume do sistema.
 from controle_volume_updated import ControladorVolume
 # Importa a nova classe que detecta a palavra de ativação.
@@ -31,7 +33,6 @@ load_dotenv()
 PORCUPINE_ACCESS_KEY = os.getenv("PORCUPINE_ACCESS_KEY")
 
 
-
 # classe principal
 class Assistente:
     def __init__(self, palavra_ativacao="alexa", navegador='chrome', headless=False, sensibilidade=0.5):
@@ -39,12 +40,17 @@ class Assistente:
         self.controlador_som = ControladorVolume() # Controlador de volume
         self.detector_wake_word = DetectorPalavraDeAtivacao(PORCUPINE_ACCESS_KEY, palavra_chave=palavra_ativacao, sensitivity=sensibilidade) # Inicializa o detector de palavra de ativação
         self.navegador_iniciado = self.controlador_web.iniciar_navegador(navegador=navegador, headless=headless) # Inicia o navegador uma vez no começo.
-        self.processo_tradutor = None # Processo do tradutor clipboard
+        
+        # Cria uma instância da classe TradutorClipboard.
+        self.tradutor_clipboard_instance = TradutorClipboard() 
+        # Esta variável guardará a referência ao processo (multiprocessing) do tradutor.
+        self.processo_tradutor = None 
+        
         self.gerenciador_agenda = GerenciadorAgenda() # Inicializa o gerenciador de agenda
         if not self.navegador_iniciado:
             print("Não foi possível iniciar o navegador. A funcionalidade de tocar música estará indisponível.")
         
-
+        # Cada chave (string da intenção) aponta para um método da própria classe que vai tratar essa intenção.
         self.handlers = {
             'get_weather': self._handle_get_weather,
             'tocar_musica': self._handle_tocar_musica,
@@ -53,18 +59,20 @@ class Assistente:
             'get_time': self._handle_get_time,
             'schedule_event': self._handle_schedule_event,
             'exit': self._handle_exit
+            # Exemplo de como adicionar uma nova habilidade:
+            # 'open_application': self._handle_open_application,
         }
 
     # ==========================================================
-    # Cada método trata uma intenção específica. (Sem mais elis \o/)
+    # Cada método abaixo contém a lógica de um antigo bloco "elif" e é responsável por sua resposta final.
     # ==========================================================
 
     def _handle_get_weather(self, dados, processo_feedback):
         """Trata da intenção de obter a previsão do tempo."""
-        ### CLIMA
         cidade = dados.get("location")
         data = dados.get("date") # Formato: '2025-10-04'
         data_hoje = datetime.now().strftime('%Y-%m-%d')
+        resposta_final = ""
         
         if not cidade: #Se não tiver cidade, volta para o começo.
             processo_feedback.join()
@@ -81,13 +89,14 @@ class Assistente:
             else:
                 resposta_final = f"Desculpe, não consegui obter a previsão do tempo."
         
-        processo_feedback.join()
-        falar(resposta_final)
-        return True # Continua a execução do assistente
+        processo_feedback.join() # Espera o áudio de "processando" terminar
+        falar(resposta_final) # Fala a resposta final
+        return True # Sinaliza para continuar o loop principal do assistente
 
     def _handle_tocar_musica(self, dados, processo_feedback):
-        """Se a intenção for tocar música."""
+        """Trata da intenção de tocar música."""
         titulo_musica = dados.get("music_title")
+        resposta_final = ""
         
         # Verifica se temos um título e se o navegador está pronto
         if titulo_musica and self.navegador_iniciado:
@@ -104,134 +113,161 @@ class Assistente:
             # O comando não tinha um título ou o navegador falhou
             resposta_final = "Não consegui identificar a música ou o navegador não foi iniciado."
 
-        processo_feedback.join()
-        falar(resposta_final)
-        return True # Continua a execução do assistente
+        processo_feedback.join() # Espera o áudio de "processando" terminar
+        falar(resposta_final) # Fala a resposta final
+        return True # Sinaliza para continuar o loop principal do assistente
 
-    def _handle_iniciar_tradutor(self, dados, processo_feedback):
-        """Se a intenção for iniciar o tradutor."""
-        resposta_final = self.iniciar_tradutor()
-        processo_feedback.join()
-        falar(resposta_final)
-        return True # Continua a execução do assistente
+    def _handle_iniciar_tradutor(self, _, processo_feedback): # Usamos '_' para indicar que 'dados' não é utilizado neste handler.
+        """Trata da intenção de iniciar o tradutor."""
+        resposta_final = self.iniciar_tradutor() 
+        processo_feedback.join() # Espera o áudio de "processando" terminar
+        falar(resposta_final) # Fala a resposta final
+        return True # Sinaliza para continuar o loop principal do assistente
 
-    def _handle_parar_tradutor(self, dados, processo_feedback):
-        """Se a intenção for parar o tradutor."""
+    def _handle_parar_tradutor(self, _, processo_feedback): # Usamos '_' para indicar que 'dados' não é utilizado neste handler.
+        """Trata da intenção de parar o tradutor."""
         resposta_final = self._parar_tradutor()
-        processo_feedback.join()
-        falar(resposta_final)
-        return True # Continua a execução do assistente
+        processo_feedback.join() # Espera o áudio de "processando" terminar
+        falar(resposta_final) # Fala a resposta final
+        return True # Sinaliza para continuar o loop principal do assistente
 
-    def _handle_get_time(self, dados, processo_feedback):
-        """Se a intenção for obter a data e hora."""
+    def _handle_get_time(self, _, processo_feedback): # Usamos '_' para indicar que 'dados' não é utilizado neste handler.
+        """Trata da intenção de obter a data e hora."""
         resposta_final = obter_data_hora_atual() 
-        processo_feedback.join()
-        falar(resposta_final)
-        return True # Continua a execução do assistente
+        processo_feedback.join() # Espera o áudio de "processando" terminar
+        falar(resposta_final) # Fala a resposta final
+        return True # Sinaliza para continuar o loop principal do assistente
 
     def _handle_schedule_event(self, dados, processo_feedback):
-        """Se a intenção for agendar um evento."""
-        ### AGENDA
+        """Trata da intenção de agendar um evento."""
         nome_evento = dados.get("event_name")
         data_evento = dados.get("event_date")
         hora_evento = dados.get("event_time")
+        resposta_final = ""
 
         if nome_evento and data_evento and hora_evento: # Se todas as informações estiverem presentes
             resposta_final = self.gerenciador_agenda.adicionar_evento(nome_evento, data_evento, hora_evento) # Tenta adicionar o evento
         else:
             resposta_final = "Informações do evento incompletas. Preciso do nome, data e hora." # Informa que faltam dados
         
-        processo_feedback.join()
-        falar(resposta_final)
-        return True # Continua a execução do assistente
+        processo_feedback.join() # Espera o áudio de "processando" terminar
+        falar(resposta_final) # Fala a resposta final
+        return True # Sinaliza para continuar o loop principal do assistente
 
-    def _handle_exit(self, dados, processo_feedback):
-        """Se a intenção for encerrar o assistente."""
+    def _handle_exit(self, _, processo_feedback): # Usamos '_' para indicar que 'dados' não é utilizado neste handler.
+        """Trata da intenção de encerrar o assistente."""
         processo_feedback.join() # Garante que o som de "processando" termine
-        return False # Sinaliza para sair
+        return False # Sinaliza para o loop principal do assistente que ele deve parar
 
-    # =======
-
-    # =======
+    # ==========================================================
+    # MÉTODO _processar_comando - Handlers!
+    # ==========================================================
 
     def _processar_comando(self, comando):
-        """Processa o comando e executa a ação apropriada."""
-        if not comando: # Se não entendeu, volta para o começo.
+        """
+        Processa o comando, analisa a intenção e executa o handler correspondente.
+        Este método atua como o 'gerente' que delega a tarefa ao handler correto.
+        """
+        if not comando: # Se não entendeu o comando de voz, retorna para continuar ouvindo.
             return True
         
-        processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",)) # assistente responde em um processo separado
+        # Inicia um processo separado para tocar o áudio de feedback "processando".
+        processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",)) 
         processo_feedback.start()
 
-        dados = analisar_comando_gemini(comando) #Aqui analisamos o comando e pegamos a intenção, cidade e data
+        # Envia o comando para o Gemini analisar e extrair a intenção e os dados.
+        dados = analisar_comando_gemini(comando) 
 
-        # TRATAMENTO DE ERRO: Se o Gemini falhou ou deu timeout
+        # TRATAMENTO DE ERRO: Se a comunicação com o Gemini falhou ou excedeu o tempo limite.
         if dados.get("error") == "timeout":
             resposta_final = "Não consegui me conectar ao meu cérebro a tempo. Pode ser um problema de rede. Tente de novo, por favor."
-            processo_feedback.join()
-            falar(resposta_final)
-            return True # Continua a execução, volta a ouvir
+            processo_feedback.join() # Espera o áudio de "processando" terminar.
+            falar(resposta_final) # Fala a mensagem de erro.
+            return True # Sinaliza para continuar a execução do assistente.
 
-        intent = dados.get("intent")
+        intent = dados.get("intent") # Pega a intenção identificada pelo Gemini.
 
-        # Aqui tentamos pegar o handler da intenção do dicionário.
+        # Tenta encontrar o método de tratamento (handler) correspondente à intenção no dicionário 'self.handlers'.
         handler = self.handlers.get(intent)
 
         if handler:
-            # Se o handler existir, chamamos o método para ele.
+            # Se um handler para a intenção foi encontrado, ele é executado.
+            # O handler é responsável por finalizar o 'processo_feedback' e falar a 'resposta_final'.
             return handler(dados, processo_feedback)
         else:
-            # Se a intenção não estiver no dicionario, resposta padrão.
+            # Se a intenção não estiver mapeada no dicionário ou for 'unknown'.
             resposta_final = "Desculpe, não entendi o que você pediu."
-            processo_feedback.join()
-            falar(resposta_final)
-            return True # Continua a execução do assistente
+            processo_feedback.join() # Espera o áudio de "processando" terminar.
+            falar(resposta_final) # Fala a resposta padrão.
+            return True # Sinaliza para continuar a execução do assistente
 
-    # =======
+    # ==========================================================
+    # MÉTODOS DE GERENCIAMENTO DE RECURSOS (Tradutor, Desligar, etc.)
+    # ==========================================================
 
-    # =======
-
-    def iniciar_tradutor(self):
-        """Inicia o monitoramento do clipboard em um processo separado."""
+    def iniciar_tradutor(self): # Seu nome original para iniciar o tradutor
+        """
+        Inicia o monitoramento do clipboard em um processo separado.
+        Cria um novo processo que executa o método 'iniciar_tradutor()' da instância de TradutorClipboard.
+        """
+        # Verifica se o processo do tradutor já está ativo.
         if self.processo_tradutor and self.processo_tradutor.is_alive():
             return "O modo de tradução já está ativo."
-
-        self.processo_tradutor = Process(target=monitorar_clipboard)
-        self.processo_tradutor.start()
+        
+        # Cria um novo processo para executar o método 'iniciar_tradutor' da nossa instância de TradutorClipboard.
+        self.processo_tradutor = Process(target=self.tradutor_clipboard_instance.iniciar_tradutor) # <-- CORREÇÃO AQUI
+        self.processo_tradutor.start() # Inicia o processo.
         return "Modo de tradução ativado."
     
-    def _parar_tradutor(self):
-        """Para o monitoramento do clipboard."""
+    def _parar_tradutor(self): # Seu nome original para parar o tradutor
+        """
+        Para o monitoramento do clipboard, encerrando o processo do tradutor.
+        """
+        # Verifica se o processo do tradutor existe e está ativo.
         if self.processo_tradutor and self.processo_tradutor.is_alive():
-            self.processo_tradutor.terminate()
-            self.processo_tradutor.join()
+            self.processo_tradutor.terminate() # Encerra o processo do tradutor "à força".
+            self.processo_tradutor.join() # Espera o processo terminar completamente.
             return "Modo de tradução desativado."
-        return "O modo de tradução não está ativo."
+        return "O modo de tradução não está ativo." # Se não estava ativo, informa.
 
     def executar(self):
-        """Loop principal do assistente."""
+        """
+        Loop principal do assistente. Fica aguardando a palavra de ativação e processa comandos.
+        """
         while True:
             self.detector_wake_word.iniciar_escuta() #espera a palavra de ativação
             try:
-                self.controlador_som.definir_volume_aplicativos(0.2, processos_ignorar=['python.exe', 'py.exe']) # Abaixa o volume dos apps com som (exceto python.exe)
-                processo_fala = Process(target=falar_audio_pre_gravado, args=("ouvindo",)) # assistente responde em um processo separado
+                # Abaixa o volume dos outros aplicativos para ouvir melhor o comando do usuário.
+                self.controlador_som.definir_volume_aplicativos(0.2, processos_ignorar=['python.exe', 'py.exe']) 
+                
+                # Inicia um processo para tocar o áudio de feedback "ouvindo".
+                processo_fala = Process(target=falar_audio_pre_gravado, args=("ouvindo",)) 
                 processo_fala.start()
-                time.sleep(1.0) #pausa para evitar que o assistente se ouça
-                comando = ouvir_comando() #Ouve o comando do usuario
+                
+                time.sleep(1.0) # Pequena pausa para evitar que o assistente capte sua própria fala.
+                comando = ouvir_comando() # Ouve o comando de voz do usuário.
+                
+                # Processa o comando. O método _processar_comando decide se continua ou encerra.
                 continuar_execucao = self._processar_comando(comando)
-                if not continuar_execucao:
-                    self.desligar()
-                    break
+                
+                if not continuar_execucao: # Se o comando sinalizou para encerrar (ex: "Alexa, sair").
+                    self.desligar() # Executa a rotina de desligamento.
+                    break # Sai do loop principal.
             finally:
-                self.controlador_som.restaurar_volume_aplicativos() # Restaura o volume original dos apps
+                # Garante que o volume dos aplicativos seja restaurado, mesmo se houver um erro.
+                self.controlador_som.restaurar_volume_aplicativos() 
 
     def desligar(self):
-        """Desliga o assistente, fechando recursos."""
+        """
+        Desliga o assistente, fechando todos os recursos abertos de forma segura.
+        """
         if self.navegador_iniciado:
-            self.controlador_web.fechar_navegador() # Fecha o navegador ao sair
-        self.detector_wake_word.fechar() # Para o detector de palavra de ativação
-        self._parar_tradutor() # Para o tradutor se estiver ativo
-        falar('Encerrando o assistente. Até mais!')
+            self.controlador_web.fechar_navegador() # Fecha o navegador se estiver aberto.
+        self.detector_wake_word.fechar() # Desativa o detector de palavra de ativação.
+        self._parar_tradutor() # Garante que o tradutor seja parado.
+        falar('Encerrando o assistente. Até mais!') # Mensagem final de despedida.
 
 if __name__ == "__main__":
-    assistente = Assistente(palavra_ativacao="alexa")
-    assistente.executar()
+    # Ponto de entrada principal do script.
+    assistente = Assistente(palavra_ativacao="alexa") # Cria uma instância do Assistente.
+    assistente.executar() # Inicia o loop de execução do assistente.

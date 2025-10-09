@@ -9,23 +9,27 @@ from multiprocessing import Process # Para executar tarefas em paralelo (ex: fal
 # ==========================================================
 # 2. Módulos Locais (Nossos próprios arquivos .py e pastas de Habilidades)
 # ==========================================================
-# Importa a classe para controlar o navegador (Opera/Chrome) para tocar músicas.
-from controlador_navegador import ControladorNavegador
-# Importa funções básicas de fala e escuta.
-from funcoes_falar_ouvir import falar, ouvir_comando, falar_audio_pre_gravado
-# Importa as habilidades principais do assistente (clima, análise de comando, busca de música).
-# E as classes GerenciadorAgenda.
-from Habilidades import (obter_previsao_tempo, analisar_comando_gemini,
-                         obter_coordenadas, obter_previsao_futuro,
-                         pesquisar_musica_youtube, obter_data_hora_atual, GerenciadorAgenda)
-# Importa a classe TradutorClipboard do seu próprio módulo tradutor_clipboard.py
-from tradutor_clipboard import TradutorClipboard, iniciar_monitoramento
+from Habilidades import (
+    GerenciadorAgenda,
+    ControladorNavegador,
+    ControladorVolume,
+    TradutorClipboard,
+    iniciar_monitoramento,
+    analisar_comando_gemini,
+    obter_previsao_tempo,
+    obter_coordenadas,
 
+    obter_previsao_futuro,
+    pesquisar_musica_youtube,
+    obter_data_hora_atual
+)
 
-# Importa a classe para controlar o volume do sistema.
-from controle_volume_updated import ControladorVolume
-# Importa a nova classe que detecta a palavra de ativação.
-from palavra_ativacao import DetectorPalavraDeAtivacao
+from utils import (
+    falar,
+    ouvir_comando,
+    falar_audio_pre_gravado,
+    DetectorPalavraDeAtivacao
+)
 
 # Carrega as variáveis de ambiente (como as chaves de API) uma única vez.
 from dotenv import load_dotenv # type: ignore

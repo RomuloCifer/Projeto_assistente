@@ -1,2 +1,3 @@
 from .funcoes_falar_ouvir import falar, ouvir_comando, falar_audio_pre_gravado
 from .palavra_ativacao import DetectorPalavraDeAtivacao
+from .personalidade import obter_resposta_personalidade

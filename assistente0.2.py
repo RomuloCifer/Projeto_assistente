@@ -27,7 +27,7 @@ from Habilidades import (
 from utils import (
     falar,
     ouvir_comando,
-    falar_audio_pre_gravado,
+    obter_resposta_personalidade,
     DetectorPalavraDeAtivacao
 )
 
@@ -177,7 +177,9 @@ class Assistente:
             return True
         
         # Inicia um processo separado para tocar o áudio de feedback "processando".
-        processo_feedback = Process(target=falar_audio_pre_gravado, args=("processando",)) 
+        # Primeiro, pegamos uma frase aleatória da categoria 'processando'.
+        frase_processando = obter_resposta_personalidade('processando')
+        processo_feedback = Process(target=falar, args=(frase_processando,))
         processo_feedback.start()
 
         # Envia o comando para o Gemini analisar e extrair a intenção e os dados.
@@ -201,9 +203,9 @@ class Assistente:
             return handler(dados, processo_feedback)
         else:
             # Se a intenção não estiver mapeada no dicionário ou for 'unknown'.
-            resposta_final = "Desculpe, não entendi o que você pediu."
-            processo_feedback.join() # Espera o áudio de "processando" terminar.
-            falar(resposta_final) # Fala a resposta padrão.
+            resposta_final = obter_resposta_personalidade('erro_generico') # Usando a categoria de erro
+            processo_feedback.join()   # Espera o áudio de "processando" terminar
+            falar(resposta_final) # Fala a resposta final
             return True # Sinaliza para continuar a execução do assistente
 
     # ==========================================================
@@ -246,7 +248,7 @@ class Assistente:
                 self.controlador_som.definir_volume_aplicativos(0.2, processos_ignorar=['python.exe', 'py.exe']) 
                 
                 # Inicia um processo para tocar o áudio de feedback "ouvindo".
-                processo_fala = Process(target=falar_audio_pre_gravado, args=("ouvindo",)) 
+                processo_fala = Process(target=falar, args=(obter_resposta_personalidade('saudacao_ativacao'),)) 
                 processo_fala.start()
                 
                 time.sleep(1.0) # Pequena pausa para evitar que o assistente capte sua própria fala.
@@ -270,7 +272,8 @@ class Assistente:
             self.controlador_web.fechar_navegador() # Fecha o navegador se estiver aberto.
         self.detector_wake_word.fechar() # Desativa o detector de palavra de ativação.
         self._parar_tradutor() # Garante que o tradutor seja parado.
-        falar('Encerrando o assistente. Até mais!') # Mensagem final de despedida.
+        frase_despedida = obter_resposta_personalidade('despedida')
+        falar(frase_despedida)
 
 if __name__ == "__main__":
     # Ponto de entrada principal do script.

@@ -40,10 +40,10 @@ PORCUPINE_ACCESS_KEY = os.getenv("PORCUPINE_ACCESS_KEY")
 
 # classe principal
 class Assistente:
-    def __init__(self, palavra_ativacao="alexa", navegador='chrome', headless=False, sensibilidade=0.5):
+    def __init__(self, palavra_ativacao="pateta", navegador='chrome', headless=False, sensibilidade=0.5, keyword_path=None, model_path=None):
         self.controlador_web = ControladorNavegador() # inicia o controlador do Navegador
         self.controlador_som = ControladorVolume() # Controlador de volume
-        self.detector_wake_word = DetectorPalavraDeAtivacao(PORCUPINE_ACCESS_KEY, palavra_chave=palavra_ativacao, sensitivity=sensibilidade) # Inicializa o detector de palavra de ativação
+        self.detector_wake_word = DetectorPalavraDeAtivacao(PORCUPINE_ACCESS_KEY, palavra_chave=palavra_ativacao, sensitivity=sensibilidade, keyword_path=keyword_path, model_path=model_path) # Inicializa o detector de palavra de ativação
         self.navegador_iniciado = self.controlador_web.iniciar_navegador(navegador=navegador, headless=headless) # Inicia o navegador uma vez no começo.
         
         # Cria uma instância da classe TradutorClipboard.
@@ -110,7 +110,9 @@ class Assistente:
             if video_id:
                 url_video = f"https://www.youtube.com/watch?v={video_id}"
                 self.controlador_web.tocar_musica(url_video)
-                resposta_final = f"Tocando {titulo_musica} no YouTube."
+                # Usa resposta da personalidade para tocar música
+                resposta_template = obter_resposta_personalidade('musica_tocando')
+                resposta_final = resposta_template.format(musica=titulo_musica)
             else:
                 # A busca falhou, então informamos o usuário
                 resposta_final = "Não consegui encontrar a música no YouTube."
@@ -277,5 +279,31 @@ class Assistente:
 
 if __name__ == "__main__":
     # Ponto de entrada principal do script.
-    assistente = Assistente(palavra_ativacao="alexa") # Cria uma instância do Assistente.
+    # Paths for Portuguese model and custom keyword
+    PATETA_PPN_PATH = os.getenv("PATETA_PPN_PATH")
+    PORTUGUESE_MODEL_PATH = os.getenv("PORTUGUESE_MODEL_PATH")
+    
+    # Verificar se os caminhos foram carregados corretamente
+    if not PATETA_PPN_PATH:
+        print("PATETA_PPN_PATH não encontrado no arquivo .env")
+        exit(1)
+    if not PORTUGUESE_MODEL_PATH:
+        print("PORTUGUESE_MODEL_PATH não encontrado no arquivo .env")
+        exit(1)
+    
+    # Verificar se os arquivos existem
+    if not os.path.exists(PATETA_PPN_PATH):
+        print(f"Arquivo não encontrado: {PATETA_PPN_PATH}")
+        print("Certifique-se de que o arquivo pateta.ppn existe no diretório do projeto.")
+        exit(1)
+    if not os.path.exists(PORTUGUESE_MODEL_PATH):
+        print(f"Arquivo não encontrado: {PORTUGUESE_MODEL_PATH}")
+        print("Certifique-se de que o arquivo porcupine_params_pt.pv existe no diretório do projeto.")
+        exit(1)
+
+    assistente = Assistente(
+        palavra_ativacao="pateta", 
+        keyword_path=PATETA_PPN_PATH,
+        model_path=PORTUGUESE_MODEL_PATH
+    )
     assistente.executar() # Inicia o loop de execução do assistente.

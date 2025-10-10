@@ -35,7 +35,14 @@ respostas = {
         "Encerrando. Até mais!",
         "Desligando. A gente se fala depois.",
         "Até a próxima!"
-    ]
+    ],
+
+    'musica_tocando': [
+        "Claro, tocando {musica} agora mesmo.",
+        "Boa escolha! Colocando {musica} pra tocar.",
+        "Aumenta o som! Tocando {musica} no YouTube.",
+        "Pra já! Iniciando {musica}."
+]
 }
 
 def obter_resposta_personalidade(categoria):

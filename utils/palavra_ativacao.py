@@ -2,20 +2,53 @@
 import pyaudio # Para interagir com o mic. #type: ignore
 import pvporcupine # O motor de detecção. #type: ignore
 import struct # Para manipular os dados de áudio.
+import os
 
 class DetectorPalavraDeAtivacao:
-    def __init__(self, access_key, palavra_chave: str = "alexa", sensitivity: float = 0.5):
+    def __init__(self, access_key, palavra_chave: str = "pateta", sensitivity: float = 0.5, keyword_path: str = None, model_path: str = None):
         try:
-            self.porcupine = pvporcupine.create(
-                access_key=access_key,
-                keywords=[palavra_chave],
-                sensitivities=[sensitivity]
-            )
+            if keyword_path:
+                # Verificar se o arquivo .ppn existe
+                if not os.path.exists(keyword_path):
+                    raise FileNotFoundError(f"Arquivo .ppn não encontrado: {keyword_path}")
+                
+                print(f"Usando arquivo .ppn: {keyword_path}")
+                
+                # Use custom .ppn file with optional custom model
+                create_params = {
+                    'access_key': access_key,
+                    'keyword_paths': [keyword_path],
+                    'sensitivities': [sensitivity]
+                }
+                
+                # Add model path if provided
+                if model_path:
+                    if os.path.exists(model_path):
+                        create_params['model_path'] = model_path
+                        print(f"Usando modelo personalizado: {model_path}")
+                    else:
+                        print(f"Arquivo de modelo não encontrado: {model_path}")
+                        print("Continuando sem modelo personalizado...")
+                    
+                self.porcupine = pvporcupine.create(**create_params)
+                print("Porcupine inicializado com sucesso!")
+            else:
+                # Use built-in keywords
+                self.porcupine = pvporcupine.create(
+                    access_key=access_key,
+                    keywords=[palavra_chave],
+                    sensitivities=[sensitivity]
+                )
             self.pa = pyaudio.PyAudio() #inicia o sistema que gerencia o áudio
             self.audio_stream = None
             self.palavra_chave = palavra_chave # salva a palavra chave
         except Exception as e: # se der algum erro, printa.
             print(f"Erro ao inicializar o detector de palavra de ativação: {e}")
+            print(f"Dica: Certifique-se de que o arquivo .ppn e o modelo .pv sejam do mesmo idioma")
+            if keyword_path:
+                print(f"Arquivo .ppn: {keyword_path}")
+            if model_path:
+                print(f"Arquivo modelo: {model_path}")
             self.porcupine = None
     
     def iniciar_escuta(self):

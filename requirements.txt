@@ -1,21 +1,62 @@
-python-dotenv
-selenium
-pyautogui
-pyperclip
-deep-translator
-gTTS
-playsound==1.2.2
-pvporcupine
-PyAudio
-SpeechRecognition
-google-api-python-client
-google-generative-ai
-pycaw
-comtypes
-psutil
-requests
-Pillow
-pygetwindow
-pyscreeze
-pymsgbox
-mouseinfo
+# Core Dependencies
+google-generativeai>=0.3.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# Speech Recognition and TTS
+SpeechRecognition>=3.10.0
+gTTS>=2.4.0
+playsound>=1.3.0
+pyaudio>=0.2.11
+
+# Wake Word Detection
+pvporcupine>=3.0.0
+
+# Web Automation
+selenium>=4.15.0
+
+# Audio Control
+pycaw>=20230407
+psutil>=5.9.0
+
+# Translation
+deep-translator>=1.11.4
+
+# GUI for Translation Popup
+tk>=0.1.0
+
+# Clipboard Management
+pyperclip>=1.8.2
+
+# Mouse Position for Translation Popup
+PyAutoGUI>=0.9.54
+
+# Google Calendar Integration
+google-auth>=2.23.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.1.1
+google-api-python-client>=2.100.0
+
+# Data Processing
+datetime
+
+# Windows COM for Audio Control
+comtypes>=1.2.0
+
+# System Process Management
+psutil>=5.9.0
+
+# JSON Processing (Built-in)
+# json
+
+# OS Operations (Built-in)  
+# os
+
+# Time Operations (Built-in)
+# time
+
+# Multiprocessing (Built-in)
+# multiprocessing
+
+# Struct for Audio Processing (Built-in)
+# struct
